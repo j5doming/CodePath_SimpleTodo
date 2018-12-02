@@ -1,5 +1,6 @@
 package com.example.juan.simpletodo;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -28,6 +29,11 @@ public class MainActivity extends AppCompatActivity {
     private static final String FILENAME = "todo.txt";
     private static final String READ_ERR = "Error reading file";
     private static final String WRITE_ERR = "Error writing file";
+    private static final String UPDATE_SUCCESSFUL = "Item updated successfully";
+    protected static final int EDIT_REQUEST_CODE = 20; // request code to launch new Activity
+    protected static final String ITEM_TEXT = "ItemText";
+    protected static final String ITEM_POSITION = "ItemPosition";
+
 
     private List<String> items;
     private ArrayAdapter<String> itemsAdapter;
@@ -73,6 +79,31 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        lvItems.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent = new Intent(MainActivity.this, EditActivity.class);
+
+                intent.putExtra(ITEM_TEXT, items.get(position));
+                intent.putExtra(ITEM_POSITION, position);
+
+                startActivityForResult(intent, EDIT_REQUEST_CODE);
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == RESULT_OK && requestCode == EDIT_REQUEST_CODE) {
+            String updatedItem = data.getStringExtra(ITEM_TEXT);
+            int position = data.getExtras().getInt(ITEM_POSITION);
+            items.set(position, updatedItem);
+            itemsAdapter.notifyDataSetChanged();
+            writeItems();
+            Toast.makeText(this, UPDATE_SUCCESSFUL, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private File getDataFile() {
