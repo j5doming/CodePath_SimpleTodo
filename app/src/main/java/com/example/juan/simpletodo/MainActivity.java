@@ -9,6 +9,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.apache.commons.io.FileUtils;
@@ -31,23 +32,44 @@ public class MainActivity extends AppCompatActivity {
     private static final String WRITE_ERR = "Error writing file";
     private static final String UPDATE_SUCCESSFUL = "Item updated successfully";
     protected static final int EDIT_REQUEST_CODE = 20; // request code to launch new Activity
-    protected static final String ITEM_TEXT = "ItemText";
-    protected static final String ITEM_POSITION = "ItemPosition";
+    protected static final String ITEM_TEXT = "ItemText"; // item text key
+    protected static final String ITEM_POSITION = "ItemPosition"; // item pos. key
 
 
     private List<String> items;
+    private List<Todo> todoItems;
     private ArrayAdapter<String> itemsAdapter;
+    private ArrayAdapter<Todo> todoItemsAdapter;
     private ListView lvItems;
+    private TodoDatabase todoDatabase;
+    private int databaseSize;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        readItems();
+        //readItems(); // currently using file i/o for content persistence
+
+        todoDatabase = new TodoDatabase(getApplicationContext());
+        todoItems = todoDatabase.getAllItems();
+        databaseSize = todoItems.size();
+
+        if (databaseSize > 0) {
+            todoItemsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, todoItems);
+        }
+        else {
+            todoItems = new ArrayList<>();
+            todoItemsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, todoItems);
+        }
+
+        /*
         itemsAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, items);
         lvItems = findViewById(R.id.lv_item);
         lvItems.setAdapter(itemsAdapter);
+        */
+        lvItems.setAdapter(todoItemsAdapter);
 
         setupListViewListener();
     }
@@ -59,9 +81,18 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), NO_ITEM, Toast.LENGTH_LONG).show();
             return;
         }
+        //add item to database
+        todoDatabase.insertItem(new Todo(text));
+        todoItems = todoDatabase.getAllItems();
+        databaseSize = todoItems.size();
+        todoItemsAdapter.notifyDataSetChanged();
+
+        /*
         itemsAdapter.add(text);
         newItem.setText("");
         writeItems();
+        */
+
         Toast.makeText(getApplicationContext(), ITEM_ADDED, Toast.LENGTH_LONG).show();
 
     }
@@ -72,9 +103,16 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
                 Log.i(getLocalClassName(), LOG_ITEM_REMOVED + position);
+                //delete the item from database
+                todoDatabase.deleteItem(todoItems.get(position).getItemText());
+                todoItems = todoDatabase.getAllItems();
+                todoItemsAdapter.notifyDataSetChanged();
+
+                /*
                 items.remove(position);
                 itemsAdapter.notifyDataSetChanged();
                 writeItems();
+                */
                 return true;
             }
         });
@@ -99,9 +137,17 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode == RESULT_OK && requestCode == EDIT_REQUEST_CODE) {
             String updatedItem = data.getStringExtra(ITEM_TEXT);
             int position = data.getExtras().getInt(ITEM_POSITION);
+            //update item to database
+            Todo item = todoItems.get(position);
+            item.setItemText(updatedItem);
+            todoDatabase.updateItem(item);
+            todoItemsAdapter.notifyDataSetChanged();
+
+            /*
             items.set(position, updatedItem);
             itemsAdapter.notifyDataSetChanged();
             writeItems();
+            */
             Toast.makeText(this, UPDATE_SUCCESSFUL, Toast.LENGTH_SHORT).show();
         }
     }
